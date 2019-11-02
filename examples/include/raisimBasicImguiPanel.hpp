@@ -104,9 +104,9 @@ void imguiRenderCallBack() {
       } else
         ImGui::Text("Unnamed object");
 
-      raisim::Vec<3> pos; ro->getPosition_W(li, pos);
-      raisim::Vec<3> vel; ro->getVelocity_W(li, vel);
-      raisim::Vec<4> ori; raisim::Mat<3,3> mat; ro->getOrientation_W(li, mat); raisim::rotMatToQuat(mat, ori);
+      raisim::Vec<3> pos; ro->getPosition(li, pos);
+      raisim::Vec<3> vel; ro->getVelocity(li, vel);
+      raisim::Vec<4> ori; raisim::Mat<3,3> mat; ro->getOrientation(li, mat); raisim::rotMatToQuat(mat, ori);
       ImGui::PopFont();
 
       ImGui::PushFont(fontMid);
@@ -134,7 +134,7 @@ void imguiRenderCallBack() {
       ImGui::PopFont();
 
       ImGui::PushFont(fontMid);
-      ImGui::Text("Ncontacts: %d", ro->getContacts().size());
+      ImGui::Text("Ncontacts: %zu", ro->getContacts().size());
       ImGui::PopFont();
     }
   }
@@ -142,14 +142,14 @@ void imguiRenderCallBack() {
   if (ImGui::CollapsingHeader("Contacts")) {
     ImGui::PushFont(fontMid);
     ImGui::Text("Solver Iterations: %d", world->getContactSolver().getLoopCounter());
-    ImGui::Text("Total number of contacts: %d", world->getContactProblem()->size());
+    ImGui::Text("Total number of contacts: %zu", world->getContactProblem()->size());
     std::vector<float> error;
     error.reserve(world->getContactSolver().getLoopCounter());
 
     for(int i=0; i<world->getContactSolver().getLoopCounter(); i++)
-      error.push_back(float(log(world->getContactSolver().getErrorHistory()[i])));
+      error.push_back(float(log(world->getContactSolver().getErrorHistory()[i])/log(10)));
 
-    ImGui::PlotLines("Lines", &error[0], error.size(), 0, "avg 0.0", float(log(world->getContactSolver().getConfig().error_to_terminate)), 1.0f, ImVec2(500,300));
+    ImGui::PlotLines("Lines", &error[0], error.size(), 0, "avg 0.0", float(log(world->getContactSolver().getConfig().error_to_terminate)/log(10)), 1.0f, ImVec2(500,300));
 
     const auto* problem = world->getContactProblem();
 

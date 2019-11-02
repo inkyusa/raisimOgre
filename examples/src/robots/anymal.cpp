@@ -54,6 +54,15 @@ void setupCallback() {
   vis->setContactVisObjectSize(0.03, 0.6);
   // speed of camera motion in freelook mode
   vis->getCameraMan()->setTopSpeed(5);
+
+  /// skybox
+  Ogre::Quaternion quat;
+  quat.FromAngleAxis(Ogre::Radian(M_PI_2), {1., 0, 0});
+  vis->getSceneManager()->setSkyBox(true,
+                                    "Examples/StormySkyBox",
+                                    500,
+                                    true,
+                                    quat);
 }
 
 int main(int argc, char **argv) {
@@ -97,7 +106,7 @@ int main(int argc, char **argv) {
 
   for(size_t i=0; i<N; i++) {
     for(size_t j=0; j<N; j++) {
-      anymals.push_back(world.addArticulatedSystem(raisim::loadResource("anymal/urdf/anymal.urdf")));
+      anymals.push_back(world.addArticulatedSystem(raisim::loadResource("anymal/anymal.urdf")));
       vis->createGraphicalObject(anymals.back(), "ANYmal" + std::to_string(i) + "X" + std::to_string(j));
       anymals.back()->setGeneralizedCoordinate({double(2*i), double(j), 0.54, 1.0, 0.0, 0.0, 0.0, 0.03, 0.4,
                                         -0.8, -0.03, 0.4, -0.8, 0.03, -0.4, 0.8, -0.03, -0.4, 0.8});

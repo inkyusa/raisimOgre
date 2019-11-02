@@ -22,6 +22,9 @@ create_executable(kinova src/robots/kinova.cpp)
 create_executable(atlas src/robots/atlas.cpp)
 create_executable(anymalOnHeightMap src/robots/heightMap.cpp)
 create_executable(chain src/robots/chain.cpp)
+create_executable(aliengo src/robots/aliengo.cpp)
+create_executable(shunk src/robots/shunk.cpp)
+create_executable(creatingRobotUsingCPP src/robots/creatingRobotUsingCPP.cpp)
 
 # remote
 create_executable(remoteVisualzation_server src/remote/server.cpp)
@@ -31,6 +34,12 @@ create_executable(remoteVisualzation_client src/remote/client.cpp)
 create_executable(zurichHeightMap src/primitives/heightMapFromPng.cpp)
 create_executable(newtonsCradle src/primitives/newtonsCradle.cpp)
 create_executable(primitives src/primitives/primitives.cpp)
+
+# meshes
+create_executable(meshes src/mesh/meshes.cpp)
+
+# visual objects
+create_executable(visualObjects src/visualObjects/visualObjects.cpp)
 
 #==
 # Install example binaries

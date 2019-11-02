@@ -7,10 +7,10 @@
 #include <chrono>
 #include "OgreTangentSpaceCalc.h"
 
-
 namespace raisim {
 
 OgreVis::~OgreVis() {
+  if (videoThread_ ) videoThread_->join();
 }
 
 bool OgreVis::mouseMoved(const MouseMotionEvent &evt) {
@@ -45,7 +45,7 @@ void OgreVis::loadMaterialFile(const std::string &filename) {
 
 void OgreVis::loadMeshFile(const std::string &file, const std::string &meshName, bool fromMemory) {
   AssimpLoader::AssOptions opts;
-  if(meshUsageCount_.find(meshName) != meshUsageCount_.end())
+  if (meshUsageCount_.find(meshName) != meshUsageCount_.end())
     meshUsageCount_[meshName]++;
   else
     meshUsageCount_[meshName] = 1;
@@ -110,24 +110,14 @@ bool OgreVis::mousePressed(const MouseButtonEvent &evt) {
   if (Ogre::ImguiManager::getSingleton().mousePressed(evt)) return true;
 
   switch (evt.button) {
-    case BUTTON_LEFT:
-      leftMouseButtonPressed_ = true;
+    case BUTTON_LEFT:leftMouseButtonPressed_ = true;
       if (hovered_) {
         if (selected_ == hovered_) break;
         if (selected_) {
-          for (int i = 0; i < selectedMaterial_.size(); i++)
-            dynamic_cast<Ogre::Entity *>(selected_->getAttachedObject(0))->getSubEntity(i)->setMaterialName(
-                selectedMaterial_[i]);
           selected_ = nullptr;
         }
         selected_ = hovered_;
         auto *newSelEn = dynamic_cast<Ogre::Entity *>(selected_->getAttachedObject(0));
-        selectedMaterial_.clear();
-        for (auto sub: newSelEn->getSubEntities())
-          selectedMaterial_.push_back(sub->getMaterialName());
-
-        for (auto sub: newSelEn->getSubEntities())
-          sub->setMaterialName("selection");
         cameraMan_->setStyle(CS_ORBIT);
         cameraMan_->setTarget(selected_);
       } else {
@@ -137,8 +127,7 @@ bool OgreVis::mousePressed(const MouseButtonEvent &evt) {
       deselect();
       rightMouseButtonPressed_ = true;
       break;
-    default:
-      break;
+    default:break;
   }
   if (cameraMan_->mousePressed(evt)) return true;
 
@@ -149,14 +138,11 @@ bool OgreVis::mouseReleased(const MouseButtonEvent &evt) {
   if (Ogre::ImguiManager::getSingleton().mouseReleased(evt)) return true;
 
   switch (evt.button) {
-    case BUTTON_LEFT:
-      leftMouseButtonPressed_ = false;
+    case BUTTON_LEFT:leftMouseButtonPressed_ = false;
       break;
-    case BUTTON_RIGHT:
-      rightMouseButtonPressed_ = false;
+    case BUTTON_RIGHT:rightMouseButtonPressed_ = false;
       break;
-    default:
-      break;
+    default:break;
   }
 
   if (cameraMan_->mouseReleased(evt)) return true;
@@ -195,7 +181,7 @@ void OgreVis::videoThread() {
   std::string command =
       "ffmpeg -r " + std::to_string(desiredFPS_) + " -f rawvideo -pix_fmt rgb24 -s " + std::to_string(w) + "x"
           + std::to_string(h) +
-          " -i - -threads 0 -preset fast -y -pix_fmt yuv420p -crf 21 " + currentVideoFile_;
+          " -i - -threads 0 -preset fast -y -crf 21 " + currentVideoFile_;
   const char *cmd = command.c_str();
   ffmpeg = popen(cmd, "w");
   RSFATAL_IF(!ffmpeg, "a pipe cannot be initiated for video recording. Maybe missing ffmpeg?")
@@ -205,8 +191,8 @@ void OgreVis::videoThread() {
   videoPixelBox_ = std::make_unique<Ogre::PixelBox>(w, h, 1, pf, videoBuffer_.get());
   videoInitMutex_.unlock();
 
-  while(true) {
-    if(stopVideoRecording_) {
+  while (true) {
+    if (stopVideoRecording_) {
       fflush(ffmpeg);
       pclose(ffmpeg);
       imageCounter = 0;
@@ -243,7 +229,7 @@ bool OgreVis::frameStarted(const Ogre::FrameEvent &evt) {
     videoInitMutex_.lock();
     isVideoRecording_ = true;
     initiateVideoRecording_ = false;
-    if(videoThread_ && videoThread_->joinable()) videoThread_->join();
+    if (videoThread_ && videoThread_->joinable()) videoThread_->join();
     videoThread_ = std::make_unique<std::thread>(&OgreVis::videoThread, this);
   }
 
@@ -256,7 +242,7 @@ bool OgreVis::frameEnded(const Ogre::FrameEvent &evt) {
   } else if (isVideoRecording_ && !stopVideoRecording_) {
 
     /// wait until the video thread processes the previous frame
-    while(newFrameAvailable_)
+    while (newFrameAvailable_)
       usleep(1e4);
 
     std::lock_guard<std::mutex> lock(videoFrameMutext_);
@@ -288,17 +274,16 @@ bool OgreVis::keyPressed(const KeyboardEvent &evt) {
   auto &key = evt.keysym.sym;
   // termination gets the highest priority
   switch (key) {
-    case SDLK_ESCAPE:
+    case OgreBites::SDLK_ESCAPE:
       getRoot()->queueEndRendering();
       break;
-    case SDLK_LSHIFT:
+    case OgreBites::SDLK_LSHIFT:
       leftShiftButtonPressed_ = true;
       break;
-    case SDLK_SPACE:
+    case OgreBites::SDLK_SPACE:
       paused_ = !paused_;
       break;
-    default:
-      break;
+    default:break;
   }
 
   if (keyboardCallback_)
@@ -319,7 +304,7 @@ bool OgreVis::keyReleased(const KeyboardEvent &evt) {
   auto &key = evt.keysym.sym;
 
   switch (key) {
-    case SDLK_LSHIFT:
+    case OgreBites::SDLK_LSHIFT:
       leftShiftButtonPressed_ = false;
     default:
       break;
@@ -338,8 +323,9 @@ void OgreVis::setup() {
   mRoot->initialise(false);
   std::map<std::string, std::string> param;
   param["FSAA"] = std::to_string(fsaa_);
+  param["vsync"] = "true";
 
-  createWindow(mAppName, initialWindowSizeX_, initialWindowSizeY_, param);
+  windowPair_ = createWindow(mAppName, initialWindowSizeX_, initialWindowSizeY_, param);
 
   locateResources();
   initialiseRTShaderSystem();
@@ -451,8 +437,8 @@ void OgreVis::sync() {
 void OgreVis::remove(raisim::Object *ob) {
   auto set = objectSet_[ob];
 
-  for(auto& go : *set.first) {
-    if(primitiveMeshNames_.find(go.meshName) == primitiveMeshNames_.end() && meshUsageCount_[go.meshName] == 1) {
+  for (auto &go : *set.first) {
+    if (primitiveMeshNames_.find(go.meshName) == primitiveMeshNames_.end() && meshUsageCount_[go.meshName] == 1) {
       Ogre::MeshManager::getSingleton().unload(go.meshName);
       Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().getByName(go.meshName);
       Ogre::MeshManager::getSingleton().remove(mesh);
@@ -510,22 +496,22 @@ void OgreVis::remoteRun() {
   }
 }
 
-GraphicObject OgreVis::generateGraphicalObject(const std::string &name,
-                                               const std::string &meshName,
-                                               const std::string &material,
-                                               const raisim::Vec<3> &scale,
-                                               const Vec<3> &offset,
-                                               const Mat<3, 3> &rot,
-                                               size_t localIdx,
-                                               bool castShadow,
-                                               bool selectable,
-                                               unsigned long int group) {
+GraphicObject OgreVis::createSingleGraphicalObject(const std::string &name,
+                                                   const std::string &meshName,
+                                                   const std::string &material,
+                                                   const raisim::Vec<3> &scale,
+                                                   const Vec<3> &offset,
+                                                   const Mat<3, 3> &rot,
+                                                   size_t localIdx,
+                                                   bool castShadow,
+                                                   bool selectable,
+                                                   unsigned long int group) {
   auto *ent = raisim::OgreVis::getSceneManager()->createEntity(name,
                                                                meshName,
                                                                Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
   ent->setCastShadows(castShadow);
   if (!material.empty())
-    ent->getSubEntity(0)->setMaterialName(material);
+    ent->setMaterialName(material);
   /// hack to check if texture coordinates exist
   GraphicObject obj;
   obj.graphics = this->getSceneManager()->getRootSceneNode()->createChildSceneNode(name);
@@ -558,7 +544,7 @@ void OgreVis::addVisualObject(const std::string &name,
   ent->setCastShadows(castShadow);
 
   if (!material.empty())
-    ent->getSubEntity(0)->setMaterialName(material);
+    ent->setMaterialName(material);
   /// hack to check if texture coordinates exist
   VisualObject &obj = visObject_[name];
   obj.graphics = getSceneManager()->getRootSceneNode()->createChildSceneNode(name);
@@ -586,7 +572,7 @@ std::vector<GraphicObject> *OgreVis::createGraphicalObject(raisim::Sphere *spher
   raisim::Mat<3, 3> rot;
   rot.setIdentity();
   sphere->setName(name);
-  auto graphicalObj = generateGraphicalObject(name, "sphereMesh", material, {rad, rad, rad}, {0, 0, 0}, rot, 0);
+  auto graphicalObj = createSingleGraphicalObject(name, "sphereMesh", material, {rad, rad, rad}, {0, 0, 0}, rot, 0);
   return registerSet(name, sphere, {graphicalObj});
 }
 
@@ -597,16 +583,16 @@ std::vector<GraphicObject> *OgreVis::createGraphicalObject(raisim::Ground *groun
   raisim::Mat<3, 3> rot;
   rot.setIdentity();
   ground->setName(name);
-  return registerSet(name, ground, {generateGraphicalObject(name,
-                                                            "planeMesh",
-                                                            material,
-                                                            {planeDim, planeDim, planeDim},
-                                                            {0, 0, 0},
-                                                            rot,
-                                                            1 << 0,
-                                                            false,
-                                                            false,
-                                                            RAISIM_OBJECT_GROUP | RAISIM_COLLISION_BODY_GROUP)});
+  return registerSet(name, ground, {createSingleGraphicalObject(name,
+                                                                "planeMesh",
+                                                                material,
+                                                                {planeDim, planeDim, planeDim},
+                                                                {0, 0, ground->getHeight()},
+                                                                rot,
+                                                                1 << 0,
+                                                                true,
+                                                                false,
+                                                                RAISIM_OBJECT_GROUP | RAISIM_COLLISION_BODY_GROUP)});
 }
 
 std::vector<GraphicObject> *OgreVis::createGraphicalObject(raisim::Box *box,
@@ -617,7 +603,7 @@ std::vector<GraphicObject> *OgreVis::createGraphicalObject(raisim::Box *box,
   box->setName(name);
   return registerSet(name,
                      box,
-                     {generateGraphicalObject(name, "cubeMesh", material, box->getDim(), {0, 0, 0}, rot, 0)});
+                     {createSingleGraphicalObject(name, "cubeMesh", material, box->getDim(), {0, 0, 0}, rot, 0)});
 }
 
 std::vector<GraphicObject> *OgreVis::createGraphicalObject(raisim::Cylinder *capsule,
@@ -630,7 +616,7 @@ std::vector<GraphicObject> *OgreVis::createGraphicalObject(raisim::Cylinder *cap
   capsule->setName(name);
   return registerSet(name,
                      capsule,
-                     {generateGraphicalObject(name, "cylinderMesh", material, {rad, rad, h}, {0, 0, 0}, rot, 0)});
+                     {createSingleGraphicalObject(name, "cylinderMesh", material, {rad, rad, h}, {0, 0, 0}, rot, 0)});
 }
 
 raisim::VisualObject *OgreVis::createGraphicalObject(raisim::Wire *wire,
@@ -647,7 +633,7 @@ raisim::VisualObject *OgreVis::createGraphicalObject(raisim::Wire *wire,
   ent->setCastShadows(true);
 
   if (!material.empty())
-    ent->getSubEntity(0)->setMaterialName(material);
+    ent->setMaterialName(material);
   /// hack to check if texture coordinates exist
   VisualObject &obj = wires_[name];
   obj.graphics = getSceneManager()->getRootSceneNode()->createChildSceneNode(name);
@@ -670,27 +656,27 @@ std::vector<GraphicObject> *OgreVis::createGraphicalObject(raisim::Capsule *caps
   rot.setIdentity();
   return registerSet(name,
                      capsule,
-                     {generateGraphicalObject(name + "_cyl",
-                                              "cylinderMesh",
-                                              material,
-                                              {rad, rad, h},
-                                              {0, 0, 0},
-                                              rot,
-                                              0),
-                      generateGraphicalObject(name + "_sph1",
-                                              "sphereMesh",
-                                              material,
-                                              {rad, rad, rad},
-                                              {0, 0, 0.5},
-                                              rot,
-                                              0),
-                      generateGraphicalObject(name + "_sph2",
-                                              "sphereMesh",
-                                              material,
-                                              {rad, rad, rad},
-                                              {0, 0, -0.5},
-                                              rot,
-                                              0)});
+                     {createSingleGraphicalObject(name + "_cyl",
+                                                  "cylinderMesh",
+                                                  material,
+                                                  {rad, rad, h},
+                                                  {0, 0, 0},
+                                                  rot,
+                                                  0),
+                      createSingleGraphicalObject(name + "_sph1",
+                                                  "sphereMesh",
+                                                  material,
+                                                  {rad, rad, rad},
+                                                  {0, 0, 0.5},
+                                                  rot,
+                                                  0),
+                      createSingleGraphicalObject(name + "_sph2",
+                                                  "sphereMesh",
+                                                  material,
+                                                  {rad, rad, rad},
+                                                  {0, 0, -0.5},
+                                                  rot,
+                                                  0)});
 }
 
 raisim::SimAndGraphicsObjectPool &OgreVis::getObjectSet() {
@@ -704,7 +690,7 @@ std::vector<GraphicObject> *OgreVis::createGraphicalObject(raisim::ArticulatedSy
   int itemId = 0;
 
   for (auto &vo: as->getVisOb())
-    registerRaisimGraphicalObjects(vo, graphics, as, name +"_"+ std::to_string(itemId++), RAISIM_OBJECT_GROUP);
+    registerRaisimGraphicalObjects(vo, graphics, as, name + "_" + std::to_string(itemId++), RAISIM_OBJECT_GROUP);
 
   itemId = 0;
 
@@ -728,16 +714,16 @@ void OgreVis::registerRaisimGraphicalObjects(raisim::VisObject &vo,
     if (!Ogre::MeshManager::getSingleton().getByName(fullFilePath))
       raisim::OgreVis::loadMeshFile(fullFilePath, fullFilePath);
     auto visname = name + "_" + as->getBodyNames()[vo.localIdx] + "_" + getBaseFileName(vo.fileName);
-    graphics.push_back(generateGraphicalObject(visname,
-                                               fullFilePath,
-                                               "",
-                                               vo.scale,
-                                               vo.offset,
-                                               vo.rot,
-                                               vo.localIdx,
-                                               true,
-                                               true,
-                                               group));
+    graphics.push_back(createSingleGraphicalObject(visname,
+                                                   fullFilePath,
+                                                   "",
+                                                   vo.scale,
+                                                   vo.offset,
+                                                   vo.rot,
+                                                   vo.localIdx,
+                                                   true,
+                                                   true,
+                                                   group));
   } else {
     auto visname = name + "_" + as->getBodyNames()[vo.localIdx] + "_";
     raisim::Vec<3> dim;
@@ -759,18 +745,19 @@ void OgreVis::registerRaisimGraphicalObjects(raisim::VisObject &vo,
         meshName = "capsuleMesh";
         dim = {vo.visShapeParam[0], vo.visShapeParam[0], vo.visShapeParam[1]};
         break;
-      default: RSFATAL("unsupported visual shape of " << name << " of " << as->getRobotDescriptionfFileName())
+      default:
+        RSFATAL("unsupported visual shape of " << name << " of " << as->getRobotDescriptionfFileName())
     }
-    graphics.push_back(generateGraphicalObject(visname + meshName,
-                                               meshName,
-                                               "",
-                                               dim,
-                                               vo.offset,
-                                               vo.rot,
-                                               vo.localIdx,
-                                               true,
-                                               true,
-                                               group));
+    graphics.push_back(createSingleGraphicalObject(visname + meshName,
+                                                   meshName,
+                                                   "",
+                                                   dim,
+                                                   vo.offset,
+                                                   vo.rot,
+                                                   vo.localIdx,
+                                                   true,
+                                                   true,
+                                                   group));
   }
   graphics.back().rotationOffset = vo.rot;
 }
@@ -778,14 +765,6 @@ void OgreVis::registerRaisimGraphicalObjects(raisim::VisObject &vo,
 void OgreVis::select(const GraphicObject &ob, bool highlight) {
   auto node = ob.graphics;
   auto *newSelEn = dynamic_cast<Ogre::Entity *>(node->getAttachedObject(0));
-  selectedMaterial_.clear();
-
-  for (auto sub: newSelEn->getSubEntities())
-    selectedMaterial_.push_back(sub->getMaterialName());
-
-  if (highlight)
-    for (auto sub: newSelEn->getSubEntities())
-      sub->setMaterialName("selection");
 
   cameraMan_->setStyle(CS_ORBIT);
   cameraMan_->setTarget(node);
@@ -907,14 +886,22 @@ void OgreVis::buildHeightMap(const std::string &name,
     }
   }
 
+  createMesh(name, vertex, normal, uv, indices);
+}
+
+void OgreVis::createMesh(const std::string& name,
+                         const std::vector<float>& vertex,
+                         const std::vector<float>& normal,
+                         const std::vector<float>& uv,
+                         const std::vector<unsigned long>& indices) {
   // now begin the object definition
   // We create a submesh per material
-
   Ogre::MeshPtr mMesh =
       Ogre::MeshManager::getSingleton().createManual(name, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
 
-  RSFATAL_IF(meshUsageCount_.find(name)!=meshUsageCount_.end() && meshUsageCount_[name]!=0, "Destroy the existing terrain before creating one")
-  meshUsageCount_[name]=1;
+  RSFATAL_IF(meshUsageCount_.find(name) != meshUsageCount_.end() && meshUsageCount_[name] != 0,
+             "Destroy the existing terrain before creating one")
+  meshUsageCount_[name] = 1;
 
   Ogre::SubMesh *submesh = mMesh->createSubMesh(name + "_submesh");
   Ogre::AxisAlignedBox bounds;
@@ -931,7 +918,7 @@ void OgreVis::buildHeightMap(const std::string &name,
   size_t offset = 0;
   offset += declaration->addElement(source, offset, Ogre::VET_FLOAT3, Ogre::VES_POSITION).getSize();
   offset += declaration->addElement(source, offset, Ogre::VET_FLOAT3, Ogre::VES_NORMAL).getSize();
-  offset += declaration->addElement(source, offset, Ogre::VET_FLOAT2, Ogre::VES_TEXTURE_COORDINATES).getSize();
+  if(uv.size()!=0) offset += declaration->addElement(source, offset, Ogre::VET_FLOAT2, Ogre::VES_TEXTURE_COORDINATES).getSize();
 
   // We create the hardware vertex buffer
   Ogre::HardwareVertexBufferSharedPtr vbuffer =
@@ -956,8 +943,10 @@ void OgreVis::buildHeightMap(const std::string &name,
     *vdata++ = *norm++;
     *vdata++ = *norm++;
     *vdata++ = *norm++;
-    *vdata++ = *uvco++;
-    *vdata++ = *uvco++;
+    if(uv.size()!=0) {
+      *vdata++ = *uvco++;
+      *vdata++ = *uvco++;
+    }
   }
 
   vbuffer->unlock();
@@ -1004,7 +993,8 @@ void OgreVis::buildHeightMap(const std::string &name,
 
 std::vector<GraphicObject> *OgreVis::createGraphicalObject(raisim::HeightMap *hm,
                                                            const std::string &name,
-                                                           const std::string &material) {
+                                                           const std::string &material,
+                                                           int sampleEveryN) {
 
   auto xSamples = hm->getXSamples();
   auto xSize = hm->getXSize();
@@ -1015,31 +1005,58 @@ std::vector<GraphicObject> *OgreVis::createGraphicalObject(raisim::HeightMap *hm
   auto centerY = hm->getCenterY();
   auto &height = hm->getHeightVector();
   std::vector<float> heightFloat;
-  heightFloat.reserve(height.size());
-  for (auto h: height)
-    heightFloat.push_back(h);
+  heightFloat.clear();
 
-  buildHeightMap(name, xSamples, xSize, centerX, ySamples, ySize, centerY, heightFloat);
+  for (size_t x=0; x < xSamples; x+=sampleEveryN) {
+    for (size_t y=0; y < ySamples; y+=sampleEveryN) {
+      heightFloat.push_back(height[x*ySamples+y]);
+    }
+  }
+
+  buildHeightMap(name, (xSamples-1)/sampleEveryN+1, xSize, centerX, (ySamples-1)/sampleEveryN+1, ySize, centerY, heightFloat);
   raisim::Mat<3, 3> rot;
   rot.setIdentity();
 
   return registerSet(name,
                      hm,
-                     {generateGraphicalObject("terrain",
-                                              name,
-                                              material,
-                                              {1, 1, 1},
-                                              {0, 0, 0},
-                                              rot,
-                                              0,
-                                              false,
-                                              false,
-                                              RAISIM_COLLISION_BODY_GROUP | RAISIM_OBJECT_GROUP)});
+                     {createSingleGraphicalObject("terrain",
+                                                  name,
+                                                  material,
+                                                  {1, 1, 1},
+                                                  {0, 0, 0},
+                                                  rot,
+                                                  0,
+                                                  false,
+                                                  false,
+                                                  RAISIM_COLLISION_BODY_GROUP | RAISIM_OBJECT_GROUP)});
+}
+
+std::vector<GraphicObject> *OgreVis::createGraphicalObject(raisim::Mesh *mesh,
+                                                           const std::string &name,
+                                                           const std::string &material) {
+
+  Mat<3, 3> rot;
+  rot.setIdentity();
+  const std::string &meshName = mesh->getMeshFileName();
+
+  raisim::OgreVis::loadMeshFile(meshName, meshName);
+  return registerSet(name, mesh, {
+          createSingleGraphicalObject(name,
+                                      meshName,
+                                      material,
+                                      {1, 1, 1},
+                                      {0, 0, 0},
+                                      rot,
+                                      0,
+                                      true,
+                                      true,
+                                      RAISIM_COLLISION_BODY_GROUP | RAISIM_OBJECT_GROUP)
+  });
 }
 
 void OgreVis::createAndAppendVisualObject(const std::string &name,
                                           const std::string &meshName,
-                                          const std::string mat,
+                                          const std::string &mat,
                                           std::vector<raisim::VisualObject> &vec) {
   auto *ent = this->getSceneManager()->createEntity(name, meshName);
   ent->setMaterialName(mat);
@@ -1101,12 +1118,12 @@ void OgreVis::renderOneFrame() {
 
       size_t contactIdx = 0;
 
-      for (auto* obj: world_->getObjList()) {
-        for (auto& contact: obj->getContacts()) {
-          if(!contact.isObjectA() && contact.getPairObjectBodyType() != raisim::BodyType::STATIC) continue;
+      for (auto *obj: world_->getObjList()) {
+        for (auto &contact: obj->getContacts()) {
+          if (!contact.isObjectA() && contact.getPairObjectBodyType() != raisim::BodyType::STATIC) continue;
           contactForces_[contactIdx].offset = contact.getPosition();
           raisim::Vec<3> zaxis = *contact.getImpulse();
-          raisim::Mat<3,3> rot;
+          raisim::Mat<3, 3> rot;
           double norm = zaxis.norm();
           if (norm == 0) {
             contactForces_[contactIdx].graphics->setVisible(false);
@@ -1174,11 +1191,16 @@ void OgreVis::renderOneFrame() {
 
 void OgreVis::deselect() {
   cameraMan_->setStyle(CS_FREELOOK);
-  if (selected_) {
-    for (int i = 0; i < selectedMaterial_.size(); i++)
-      dynamic_cast<Ogre::Entity *>(selected_->getAttachedObject(0))->getSubEntity(i)->setMaterialName(selectedMaterial_[i]);
-  }
   selected_ = nullptr;
+}
+
+void OgreVis::closeApp() {
+  ApplicationContext::closeApp();
+  imGuiRenderCallback_ = nullptr;
+  imGuiSetupCallback_ = nullptr;
+  keyboardCallback_ = nullptr;
+  setUpCallback_ = nullptr;
+  controlCallback_ = nullptr;
 }
 
 }

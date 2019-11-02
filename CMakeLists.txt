@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(raisimOgre VERSION 0.2.0)
+project(raisimOgre VERSION 0.6.0)
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
@@ -9,7 +9,7 @@ option(RAISIM_OGRE_EXAMPLES "Build example applications." FALSE)
 ####################################
 ########### dependencies ###########
 ####################################
-find_package(raisim CONFIG REQUIRED)
+find_package(raisim 0.6.0 CONFIG REQUIRED)
 find_package(OGRE 1.12.1 CONFIG REQUIRED COMPONENTS Bites RTShaderSystem)
 find_package(Eigen3 REQUIRED HINTS ${Eigen3_HINT})
 
@@ -34,7 +34,8 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_14)
 target_compile_options(${PROJECT_NAME} PUBLIC -fPIC)
 target_compile_options(${PROJECT_NAME} PRIVATE "$<$<CONFIG:RELEASE>:-O3>")
 target_compile_options(${PROJECT_NAME} PRIVATE "$<$<CONFIG:DEBUG>:-O0>")
-target_link_libraries(${PROJECT_NAME} PUBLIC OgreMain OgreBites OgreRTShaderSystem OgreMeshLodGenerator raisim::assimp raisim::raisim pthread zzip)
+target_compile_options(${PROJECT_NAME} PRIVATE "$<$<CONFIG:DEBUG>:-g>")
+target_link_libraries(${PROJECT_NAME} PUBLIC OgreMain OgreBites OgreRTShaderSystem OgreMeshLodGenerator raisim::assimp raisim::raisim pthread zzip SDL2)
 target_include_directories(${PROJECT_NAME}
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

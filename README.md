@@ -3,10 +3,20 @@
 ## What is raisimOgre?
 raisimOgre is a visualizer for raisim. It is a simple wrapper around Ogre3d (https://www.ogre3d.org/), which is an open-source 3d rendering library.
 
+## News
+- 2019/10/16, please pull ogre. I reported a skybox bug to ogre and added my fix to the forked repository.
+- Mesh functionality added in RAISIM. Now RAISIM can simulate any trimesh (including non-convex ones).
+![alt-text-2](img/monkeys.gif "meshes")
+
 ## Requirements
 - Linux only. support ubuntu 16.04 and 18.04 but might work on other distributions
 - g++, gcc > 6 ([how to install?](https://github.com/jhwangbo/raisimHelp/tree/master#how-to-install-latest-version-of-g))
 - cmake > 3.10 ([how to install?](https://github.com/jhwangbo/raisimHelp/tree/master#how-to-install-cmake))
+
+## Related repos
+- [raisimLib](https://github.com/leggedrobotics/raisimLib): the physics engine
+- [raisimGym](https://github.com/leggedrobotics/raisimGym): a few gym environments using RAISIM
+- [raisimPy](https://github.com/robotlearn/raisimpy): a (third-party) python wrapper of RAISIM
 
 ## Install
 Please install/save everything locally to prevent corrupting your system files. We will assume that you have a single workspace where you save all repos related to raisim. Here we introduce two variables
@@ -96,3 +106,9 @@ Please fork the repo, make changes and then send a pull request. Instructions ca
 ## Available materials
 Check rsc/material for a few examples of pbr materials. 
 Basic color materials can be found [here](https://www.rapidtables.com/web/color/RGB_Color.html). Replace spaces in the name by "_", e.g., "dark red" to "dark_red"
+
+## Who made RaiSimOgre?
+Jemin Hwangbo developed raisimOgre with the help of the following contributors
+
+- Vassilios Tsounis
+

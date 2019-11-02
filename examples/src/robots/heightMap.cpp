@@ -54,7 +54,7 @@ void setupCallback() {
   // beyond this distance, shadow disappears
   vis->getSceneManager()->setShadowFarDistance(10);
   // size of contact points and contact forces
-  vis->setContactVisObjectSize(0.1, 0.4);
+  vis->setContactVisObjectSize(0.01, 0.4);
   // speed of camera motion in freelook mode
   vis->getCameraMan()->setTopSpeed(5);
 }
@@ -80,10 +80,9 @@ int main(int argc, char **argv) {
   /// create raisim objects
   auto sphere1 = world.addSphere(0.1, 1);
   auto sphere2 = world.addSphere(0.1, 1);
-  auto anymal = world.addArticulatedSystem(raisim::loadResource("anymal/urdf/anymal.urdf"));
+  auto anymal = world.addArticulatedSystem(raisim::loadResource("anymal/anymal.urdf"));
   sphere1->setPosition(0, 0, 5);
   sphere2->setPosition(0.5, 0, 3);
-  world.setERP(world.getTimeStep() * .1, world.getTimeStep() * .1);
 
   /// create heightmap
   raisim::TerrainProperties terrainProperties;
@@ -121,7 +120,7 @@ int main(int argc, char **argv) {
                                     -0.8, -0.03, 0.4, -0.8, 0.03, -0.4, 0.8, -0.03, -0.4, 0.8});
 
   vis->select(anymal_graphics->at(0), false);
-  vis->getCameraMan()->setYawPitchDist(Ogre::Radian(0), -Ogre::Radian(M_PI_4), 1);
+  vis->getCameraMan()->setYawPitchDist(Ogre::Radian(0), -Ogre::Radian(M_PI_4), 2);
   anymal->setGeneralizedForce(Eigen::VectorXd::Zero(anymal->getDOF()));
   anymal->setControlMode(raisim::ControlMode::PD_PLUS_FEEDFORWARD_TORQUE);
   anymal->setPdGains(jointPgain, jointDgain);

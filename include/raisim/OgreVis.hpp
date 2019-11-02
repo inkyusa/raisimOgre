@@ -18,6 +18,7 @@
 #include "ImguiManager.h"
 #include "AssimpLoader.h"
 #include "interfaceClasses.hpp"
+#include "SDL2/SDL.h"
 
 namespace raisim {
 
@@ -171,9 +172,17 @@ class OgreVis :
                                                     const std::string &name);
 
   /**
-  * @param as raisim articulated system object
+  * @param hm raisim heightmap object
   * @param name unique identifier of the object */
   std::vector<GraphicObject> *createGraphicalObject(raisim::HeightMap *hm,
+                                                    const std::string &name,
+                                                    const std::string &material = "default",
+                                                    int sampleEveryN = 1);
+
+  /**
+  * @param as raisim articulated system object
+  * @param name unique identifier of the object */
+  std::vector<GraphicObject> *createGraphicalObject(raisim::Mesh *mesh,
                                                     const std::string &name,
                                                     const std::string &material = "default");
 
@@ -267,6 +276,24 @@ class OgreVis :
                       float centerY,
                       const std::vector<float> &height);
 
+  /// this method is not meant to be inerited but it solves python binding issue in raisimpy
+  void closeApp();
+
+  void hideWindow() { SDL_HideWindow(windowPair_.native); }
+  void showWindow() { SDL_ShowWindow(windowPair_.native);}
+
+  /// use this method to manually assign a mesh to an object
+  GraphicObject createSingleGraphicalObject(const std::string &name,
+                                            const std::string &meshName,
+                                            const std::string &material,
+                                            const raisim::Vec<3> &scale,
+                                            const Vec<3> &offset,
+                                            const Mat<3, 3> &rot,
+                                            size_t localIdx,
+                                            bool castShadow = true,
+                                            bool selectable = true,
+                                            unsigned long int group = RAISIM_OBJECT_GROUP | RAISIM_COLLISION_BODY_GROUP);
+
  private:
   OgreVis()
       : ApplicationContext("RaisimDemoApp") {
@@ -297,17 +324,6 @@ class OgreVis :
   bool frameEnded(const Ogre::FrameEvent &evt) final;
   void videoThread();
 
-  GraphicObject generateGraphicalObject(const std::string &name,
-                                        const std::string &meshName,
-                                        const std::string &material,
-                                        const raisim::Vec<3> &scale,
-                                        const Vec<3> &offset,
-                                        const Mat<3, 3> &rot,
-                                        size_t localIdx,
-                                        bool castShadow = true,
-                                        bool selectable = true,
-                                        unsigned long int group = RAISIM_OBJECT_GROUP | RAISIM_COLLISION_BODY_GROUP);
-
   void registerRaisimGraphicalObjects(raisim::VisObject &vo,
                                       std::vector<GraphicObject> &graphics,
                                       raisim::ArticulatedSystem *as,
@@ -316,16 +332,23 @@ class OgreVis :
 
   void createAndAppendVisualObject(const std::string &name,
                                    const std::string &meshName,
-                                   const std::string mat,
+                                   const std::string &mat,
                                    std::vector<raisim::VisualObject> &vec);
 
   void updateVisualizationObject(raisim::VisualObject &vo);
+
+  void createMesh(const std::string& name,
+                  const std::vector<float>& vertex,
+                  const std::vector<float>& normal,
+                  const std::vector<float>& uv,
+                  const std::vector<unsigned long>& indices);
 
   ImGuiRenderCallback imGuiRenderCallback_ = nullptr;
   ImGuiSetupCallback imGuiSetupCallback_ = nullptr;
   KeyboardCallback keyboardCallback_ = nullptr;
   SetUpCallback setUpCallback_ = nullptr;
   ControlCallback controlCallback_ = nullptr;
+  NativeWindowPair windowPair_;
   Ogre::SceneNode *camNode_ = nullptr;
   Ogre::Camera *mainCamera_ = nullptr;
   raisim::CameraMan *cameraMan_;
@@ -348,7 +371,6 @@ class OgreVis :
   std::map<std::string, VisualObject> visObject_;
   std::map<std::string, VisualObject> wires_;
   uint32_t initialWindowSizeX_ = 400, initialWindowSizeY_ = 300;
-  std::vector<std::string> selectedMaterial_;
   std::map<std::string, size_t> meshUsageCount_;
   std::set<std::string> primitiveMeshNames_;
   double desiredFPS_ = 30.;

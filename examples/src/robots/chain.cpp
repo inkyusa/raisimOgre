@@ -71,6 +71,7 @@ int main(int argc, char **argv) {
   vis->setImguiRenderCallback(imguiRenderCallBack);
   vis->setSetUpCallback(setupCallback);
   vis->setAntiAliasing(8);
+  raisim::gui::manualStepping = true;
 
   /// starts visualizer thread
   vis->initApp();
@@ -78,13 +79,14 @@ int main(int argc, char **argv) {
   /// create raisim objects
   auto ground = world.addGround();
   auto chain = world.addArticulatedSystem(raisim::loadResource("chain/robot.urdf"));
+  chain->setGeneralizedVelocity({6,0,0,0,0,0,0,0,0});
 
   /// create visualizer objects
   vis->createGraphicalObject(ground, 50, "floor", "default");
   auto chain_graphics = vis->createGraphicalObject(chain, "ANYmal");
 
   vis->select(chain_graphics->at(0));
-  vis->getCameraMan()->setYawPitchDist(Ogre::Radian(0), -Ogre::Radian(M_PI_4), 0.5);
+  vis->getCameraMan()->setYawPitchDist(Ogre::Radian(0), -Ogre::Radian(M_PI_4), 2.5);
   chain->setGeneralizedForce(Eigen::VectorXd::Zero(chain->getDOF()));
   chain->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
 
