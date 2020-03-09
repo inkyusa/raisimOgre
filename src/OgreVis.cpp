@@ -1092,13 +1092,13 @@ void OgreVis::renderOneFrame() {
     /// add more if necessary
     if (mask_ & RAISIM_CONTACT_POINT_GROUP)
       for (size_t i = contactPoints_.size(); i < nContact; i++) {
-        createAndAppendVisualObject("cp" + std::to_string(i), "sphereMesh", "redEmit", contactPoints_);
+        createAndAppendVisualObject("cp" + std::to_string(i), "sphereMesh", "orange", contactPoints_);
         contactPoints_.back().scale = {contactPointSphereSize_, contactPointSphereSize_, contactPointSphereSize_};
       }
 
     if (mask_ & RAISIM_CONTACT_FORCE_GROUP)
       for (size_t i = contactForces_.size(); i < nContact; i++) {
-        createAndAppendVisualObject("cf" + std::to_string(i), "arrowMesh", "blueEmit", contactForces_);
+        createAndAppendVisualObject("cf" + std::to_string(i), "arrowMesh", "red", contactForces_);
       }
 
     /// now actually update the position and orientation
